@@ -126,17 +126,17 @@ class OpenAIServingChat(OpenAIServing):
 
             tool_parser = self.tool_parser
 
-            # validation for OpenAI tools
-            # tool_choice = "required" is not supported
-            if request.tool_choice == "required":
-                return self.create_error_response(
-                    "tool_choice = \"required\" is not supported!")
-
             # Validate tool choice is valid
-            if request.tools and request.tool_choice not in ["none", "auto", None]:
-                if not isinstance(request.tool_choice, ChatCompletionNamedToolChoiceParam):
-                    return self.create_error_response(
-                        "Invalid tool_choice format. Must be 'none', 'auto' or a named tool.")
+            if request.tools:
+                if request.tool_choice == "required":
+                    # When tool_choice is "required", force the model to call a tool
+                    if not isinstance(tokenizer, MistralTokenizer):
+                        return self.create_error_response(
+                            "tool_choice = \"required\" requires a model that supports forced tool calling")
+                elif request.tool_choice not in ["none", "auto", None]:
+                    if not isinstance(request.tool_choice, ChatCompletionNamedToolChoiceParam):
+                        return self.create_error_response(
+                            "Invalid tool_choice format. Must be 'none', 'auto', 'required' or a named tool.")
 
             # because of issues with pydantic we need to potentially
             # re-serialize the tool_calls field of the request
@@ -145,12 +145,12 @@ class OpenAIServingChat(OpenAIServing):
                 maybe_serialize_tool_calls(request)
 
             if request.tools:
-                if request.tool_choice == "auto":
+                if request.tool_choice in ["auto", "required", None]:
                     if not (self.enable_auto_tools and tool_parser is not None) and not isinstance(tokenizer, MistralTokenizer):
-                        # for hf tokenizers, "auto" tools requires
+                        # for hf tokenizers, "auto"/"required" tools requires
                         # --enable-auto-tool-choice and --tool-call-parser
                         return self.create_error_response(
-                            "\"auto\" tool choice requires "
+                            "Tool choice \"auto\"/\"required\" requires "
                             "--enable-auto-tool-choice and --tool-call-parser to be set"
                         )
                 elif isinstance(request.tool_choice, ChatCompletionNamedToolChoiceParam):

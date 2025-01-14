@@ -222,8 +222,8 @@ class ChatCompletionRequest(OpenAIBaseModel):
     temperature: Optional[float] = None
     top_p: Optional[float] = None
     tools: Optional[List[ChatCompletionToolsParam]] = None
-    tool_choice: Optional[Union[Literal["none"], Literal["auto"],
-                                ChatCompletionNamedToolChoiceParam]] = "none"
+    tool_choice: Optional[Union[Literal["none"], Literal["auto"], Literal["required"],
+                                ChatCompletionNamedToolChoiceParam]] = "auto"
 
     # NOTE this will be ignored by VLLM -- the model determines the behavior
     parallel_tool_calls: Optional[bool] = False
