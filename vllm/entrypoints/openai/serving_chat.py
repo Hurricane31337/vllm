@@ -132,21 +132,33 @@ class OpenAIServingChat(OpenAIServing):
                 return self.create_error_response(
                     "tool_choice = \"required\" is not supported!")
 
+            # Validate tool choice is valid
+            if request.tools and request.tool_choice not in ["none", "auto", None]:
+                if not isinstance(request.tool_choice, ChatCompletionNamedToolChoiceParam):
+                    return self.create_error_response(
+                        "Invalid tool_choice format. Must be 'none', 'auto' or a named tool.")
+
             # because of issues with pydantic we need to potentially
             # re-serialize the tool_calls field of the request
             # for more info: see comment in `maybe_serialize_tool_calls`
             if isinstance(tokenizer, MistralTokenizer):
                 maybe_serialize_tool_calls(request)
 
-            if (request.tool_choice == "auto" and
-                    not (self.enable_auto_tools and tool_parser is not None)
-                    and not isinstance(tokenizer, MistralTokenizer)):
-                # for hf tokenizers, "auto" tools requires
-                # --enable-auto-tool-choice and --tool-call-parser
-                return self.create_error_response(
-                    "\"auto\" tool choice requires "
-                    "--enable-auto-tool-choice and --tool-call-parser to be set"
-                )
+            if request.tools:
+                if request.tool_choice == "auto":
+                    if not (self.enable_auto_tools and tool_parser is not None) and not isinstance(tokenizer, MistralTokenizer):
+                        # for hf tokenizers, "auto" tools requires
+                        # --enable-auto-tool-choice and --tool-call-parser
+                        return self.create_error_response(
+                            "\"auto\" tool choice requires "
+                            "--enable-auto-tool-choice and --tool-call-parser to be set"
+                        )
+                elif isinstance(request.tool_choice, ChatCompletionNamedToolChoiceParam):
+                    # Validate named tool exists in tools list
+                    tool_name = request.tool_choice.function.name
+                    if not any(tool.function.name == tool_name for tool in request.tools):
+                        return self.create_error_response(
+                            f"Tool '{tool_name}' not found in provided tools list")
 
             tool_dicts = None if request.tools is None else [
                 tool.model_dump() for tool in request.tools
