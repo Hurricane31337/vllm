@@ -2,8 +2,8 @@ import os
 import sys
 import zipfile
 
-# Read the VLLM_MAX_SIZE_MB environment variable, defaulting to 250 MB
-VLLM_MAX_SIZE_MB = int(os.environ.get('VLLM_MAX_SIZE_MB', 250))
+# Read the VLLM_MAX_SIZE_MB environment variable, defaulting to 350 MB
+VLLM_MAX_SIZE_MB = int(os.environ.get('VLLM_MAX_SIZE_MB', 350))
 
 
 def print_top_10_largest_files(zip_file):
